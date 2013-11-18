@@ -15549,6 +15549,43 @@ diff -Naur a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
  
  BOOL is_invalid_op(const struct wined3d_state *state, int stage,
          enum wined3d_texture_op op, DWORD arg1, DWORD arg2, DWORD arg3) DECLSPEC_HIDDEN;
+         @@ -2984,6 +3222,7 @@
+ #define WINED3DFMT_FLAG_HEIGHT_SCALE                0x00040000
+ #define WINED3DFMT_FLAG_TEXTURE                     0x00080000
+ #define WINED3DFMT_FLAG_BLOCKS_NO_VERIFY            0x00100000
++#define WINED3DFMT_FLAG_PALETTE                     0x00200000
+ 
+ struct wined3d_rational
+ {
+@@ -3063,4 +3302,28 @@
+ 
+ #define MAKEDWORD_VERSION(maj, min) (((maj & 0xffff) << 16) | (min & 0xffff))
+ 
++static inline void wined3d_set_fpu_cw(WORD cw)
++{
++#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
++    __asm__ volatile ("fnclex");
++    __asm__ volatile ("fldcw %0" : : "m" (cw));
++#elif defined(__i386__) && defined(_MSC_VER)
++    __asm fnclex;
++    __asm fldcw cw;
++#endif
++}
++
++static inline WORD wined3d_get_fpu_cw(void)
++{
++    WORD cw = 0;
++#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
++    __asm__ volatile ("fnstcw %0" : "=m" (cw));
++#elif defined(__i386__) && defined(_MSC_VER)
++    __asm fnstcw cw;
++#endif
++    return cw;
++}
++
++#define WINED3D_DEFAULT_FPU_CW 0x037f
++
+ #endif
 diff -Naur a/dlls/wined3d/wined3d.spec b/dlls/wined3d/wined3d.spec
 --- a/dlls/wined3d/wined3d.spec	2013-11-08 22:23:34.000000000 +0400
 +++ b/dlls/wined3d/wined3d.spec	2013-11-18 10:23:57.895234637 +0400
